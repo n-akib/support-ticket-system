@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+coverage/
+.DS_Store
+*.tsbuildinfo
+.idea/
+# Assessment & Planning Notes (Private)
+Agenthandsoff.md
+Project.md
+Skill.md
+Task.md
