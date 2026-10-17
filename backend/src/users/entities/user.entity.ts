@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Ticket } from '../../tickets/entities/ticket.entity';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -32,6 +34,12 @@ export class User {
     default: UserRole.CUSTOMER,
   })
   role: UserRole;
+
+  @OneToMany(() => Ticket, (ticket) => ticket.createdBy)
+  createdTickets: Ticket[];
+
+  @OneToMany(() => Ticket, (ticket) => ticket.assignedTo)
+  assignedTickets: Ticket[];
 
   @CreateDateColumn({ type: 'timestamp with time zone' })
   createdAt: Date;
