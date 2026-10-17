@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { CommentsService } from './comments.service';
 import { Comment } from './entities/comment.entity';
 import { TicketsService } from '../tickets/tickets.service';
 import { User, UserRole } from '../users/entities/user.entity';
+import { TicketStatus } from '../tickets/entities/ticket.entity';
 import { EventsGateway } from '../events/events.gateway';
 
 describe('CommentsService', () => {
@@ -115,6 +116,18 @@ describe('CommentsService', () => {
       await expect(
         service.create('foreign-ticket', { body: 'Unauthorized comment' }, mockCustomer),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects adding comments on a closed ticket', async () => {
+      (ticketsService.findOne as jest.Mock).mockResolvedValue({
+        id: 'ticket-999',
+        status: TicketStatus.CLOSED,
+        createdById: mockCustomer.id,
+      });
+
+      await expect(
+        service.create('ticket-999', { body: 'Late comment' }, mockCustomer),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

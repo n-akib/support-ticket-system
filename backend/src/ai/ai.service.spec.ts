@@ -128,6 +128,40 @@ describe('AiService', () => {
       expect(result.suggestedCategory).toBe('billing');
     });
 
+    it('normalizes hallucinated category from LLM to allowed category', async () => {
+      const mockLlmResponse = {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    suggestedCategory: 'hallucinated_sales_dept',
+                    suggestedPriority: 'low',
+                    summary: 'User asking about invoice receipts',
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      };
+
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      } as any);
+
+      const result = await service.suggest({
+        title: 'Need copy of invoice payment',
+        description: 'Please email me my latest monthly subscription charge receipt',
+      });
+
+      expect(result.source).toBe('ai');
+      expect(['billing', 'technical', 'account', 'general']).toContain(result.suggestedCategory);
+      expect(result.suggestedCategory).toBe('billing');
+    });
+
     it('falls back seamlessly if fetch network call throws error', async () => {
       global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
 

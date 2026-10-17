@@ -74,7 +74,7 @@ describe('HttpExceptionFilter', () => {
       expect.objectContaining({
         statusCode: 500,
         error: 'Internal Server Error',
-        message: 'Database connection timeout',
+        message: 'Internal server error',
         path: '/tickets/sample-id',
       }),
     );

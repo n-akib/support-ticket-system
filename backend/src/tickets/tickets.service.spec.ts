@@ -274,5 +274,54 @@ describe('TicketsService', () => {
         service.update(nonOpenTicket.id, { title: 'Updated Title' }, mockCustomer),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('forbids customer from updating ticket priority and changing their own SLA', async () => {
+      const openTicket = {
+        ...mockTicket,
+        status: TicketStatus.OPEN,
+        priority: TicketPriority.MEDIUM,
+        createdById: mockCustomer.id,
+      };
+      jest.spyOn(service, 'findOne').mockResolvedValue(openTicket as any);
+
+      await expect(
+        service.update(openTicket.id, { priority: TicketPriority.URGENT }, mockCustomer),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('Ticket Assignment', () => {
+    it('assigns ticket to an agent and sets both assignedToId and assignedTo relation', async () => {
+      const openTicket = { ...mockTicket, assignedToId: null, assignedTo: null };
+      jest.spyOn(service, 'findOne').mockResolvedValue(openTicket as any);
+      usersRepo.findOne.mockResolvedValue(mockAgent);
+
+      await service.assign(openTicket.id, { assignedToId: mockAgent.id }, mockAgent);
+
+      expect(openTicket.assignedToId).toBe(mockAgent.id);
+      expect(openTicket.assignedTo).toBe(mockAgent);
+      expect(ticketsRepo.save).toHaveBeenCalledWith(openTicket);
+    });
+
+    it('unassigns ticket by clearing both assignedToId and assignedTo relation', async () => {
+      const assignedTicket = { ...mockTicket, assignedToId: mockAgent.id, assignedTo: mockAgent };
+      jest.spyOn(service, 'findOne').mockResolvedValue(assignedTicket as any);
+
+      await service.assign(assignedTicket.id, { assignedToId: null }, mockAgent);
+
+      expect(assignedTicket.assignedToId).toBeNull();
+      expect(assignedTicket.assignedTo).toBeNull();
+      expect(ticketsRepo.save).toHaveBeenCalledWith(assignedTicket);
+    });
+
+    it('rejects assigning ticket to a customer account', async () => {
+      const openTicket = { ...mockTicket, assignedToId: null };
+      jest.spyOn(service, 'findOne').mockResolvedValue(openTicket as any);
+      usersRepo.findOne.mockResolvedValue(mockCustomer);
+
+      await expect(
+        service.assign(openTicket.id, { assignedToId: mockCustomer.id }, mockAgent),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 });
