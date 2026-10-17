@@ -41,3 +41,13 @@ export interface AiSuggestResponse {
   source: 'ai' | 'fallback';
 }
 
+export interface Comment {
+  id: string;
+  ticketId: string;
+  authorId: string;
+  author: User;
+  body: string;
+  createdAt: string;
+}
+
+
