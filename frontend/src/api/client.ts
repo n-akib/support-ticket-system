@@ -48,6 +48,10 @@ apiClient.interceptors.response.use(
  */
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      return 'Unable to reach the server. Please ensure the backend is running at http://localhost:3000.';
+    }
+
     const data = error.response?.data as ApiErrorResponse | undefined;
     if (data?.message) {
       if (Array.isArray(data.message)) {
@@ -55,6 +59,17 @@ export function getApiErrorMessage(error: unknown): string {
       }
       return data.message;
     }
+
+    if (error.response?.status === 403) {
+      return 'You do not have permission to perform this action.';
+    }
+    if (error.response?.status === 404) {
+      return 'The requested resource was not found.';
+    }
+    if (error.response?.status === 500) {
+      return 'Server error. Please try again later.';
+    }
+
     if (error.response?.statusText) {
       return `${error.response.status} ${error.response.statusText}`;
     }
