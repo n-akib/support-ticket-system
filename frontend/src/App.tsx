@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { TicketsPlaceholderPage } from './pages/TicketsPlaceholderPage';
+import { TicketListPage } from './pages/TicketListPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -38,7 +38,7 @@ export const AppContent: React.FC = () => {
 
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/tickets" element={<TicketsPlaceholderPage />} />
+        <Route path="/tickets" element={<TicketListPage />} />
       </Route>
 
       {/* Catch-all redirect */}
