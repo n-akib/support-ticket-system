@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Comment } from '../../comments/entities/comment.entity';
 
 export enum TicketStatus {
   OPEN = 'open',
@@ -69,6 +71,9 @@ export class Ticket {
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'assignedToId' })
   assignedTo: User | null;
+
+  @OneToMany(() => Comment, (comment) => comment.ticket)
+  comments: Comment[];
 
   @Column({ type: 'timestamp with time zone' })
   dueAt: Date;
