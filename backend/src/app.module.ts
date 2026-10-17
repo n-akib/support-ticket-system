@@ -1,4 +1,4 @@
- import { Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as path from 'path';
@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { CommentsModule } from './comments/comments.module';
     AuthModule,
     TicketsModule,
     CommentsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
