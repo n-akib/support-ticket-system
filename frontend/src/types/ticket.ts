@@ -26,3 +26,18 @@ export interface TicketFilters {
   category?: string;
   search?: string;
 }
+
+export interface CreateTicketInput {
+  title: string;
+  description: string;
+  priority?: TicketPriority;
+  category?: string;
+}
+
+export interface AiSuggestResponse {
+  suggestedCategory: string;
+  suggestedPriority: TicketPriority;
+  summary: string;
+  source: 'ai' | 'fallback';
+}
+

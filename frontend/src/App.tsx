@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TicketListPage } from './pages/TicketListPage';
+import { CreateTicketPage } from './pages/CreateTicketPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 const PublicOnlyRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,6 +40,7 @@ export const AppContent: React.FC = () => {
       {/* Protected routes */}
       <Route element={<ProtectedRoute />}>
         <Route path="/tickets" element={<TicketListPage />} />
+        <Route path="/tickets/new" element={<CreateTicketPage />} />
       </Route>
 
       {/* Catch-all redirect */}
