@@ -84,10 +84,23 @@ export class Ticket {
   @UpdateDateColumn({ type: 'timestamp with time zone' })
   updatedAt: Date;
 
+  /**
+   * Computed getter indicating whether ticket has breached its SLA deadline.
+   */
   get isOverdue(): boolean {
     if (this.status === TicketStatus.RESOLVED || this.status === TicketStatus.CLOSED) {
       return false;
     }
     return new Date() > new Date(this.dueAt);
+  }
+
+  /**
+   * Ensures isOverdue is included when entity is serialized to JSON (Express / JSON.stringify)
+   */
+  toJSON() {
+    return {
+      ...this,
+      isOverdue: this.isOverdue,
+    };
   }
 }

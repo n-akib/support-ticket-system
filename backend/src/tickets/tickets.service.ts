@@ -156,8 +156,13 @@ export class TicketsService {
   async update(id: string, dto: UpdateTicketDto, currentUser: User): Promise<Ticket> {
     const ticket = await this.findOne(id, currentUser);
 
-    if (currentUser.role === UserRole.CUSTOMER && ticket.status !== TicketStatus.OPEN) {
-      throw new BadRequestException('Customers can only edit tickets while they are in "open" status');
+    if (currentUser.role === UserRole.CUSTOMER) {
+      if (ticket.status !== TicketStatus.OPEN) {
+        throw new BadRequestException('Customers can only edit tickets while they are in "open" status');
+      }
+      if (dto.priority !== undefined && dto.priority !== ticket.priority) {
+        throw new ForbiddenException('Customers cannot modify ticket priority or SLA');
+      }
     }
 
     if (dto.title !== undefined) {
@@ -224,6 +229,7 @@ export class TicketsService {
 
   /**
    * Assigns a ticket to an agent or unassigns it.
+   * Explicitly updates both the foreign key and the relation object to ensure TypeORM persistence.
    */
   async assign(id: string, dto: AssignTicketDto, currentUser: User): Promise<Ticket> {
     const ticket = await this.findOne(id, currentUser);
@@ -239,8 +245,10 @@ export class TicketsService {
         throw new BadRequestException('Cannot assign a ticket to a customer account');
       }
       ticket.assignedToId = agent.id;
+      ticket.assignedTo = agent;
     } else {
       ticket.assignedToId = null;
+      ticket.assignedTo = null;
     }
 
     await this.ticketsRepository.save(ticket);

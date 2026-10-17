@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { TicketsService } from '../tickets/tickets.service';
 import { User } from '../users/entities/user.entity';
+import { TicketStatus } from '../tickets/entities/ticket.entity';
 import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
@@ -19,10 +20,15 @@ export class CommentsService {
   /**
    * Adds a comment to a ticket.
    * Access is validated through ticketsService.findOne (ensuring Customers only comment on their own tickets).
+   * Rejects comments if ticket is in closed terminal state.
    */
   async create(ticketId: string, dto: CreateCommentDto, currentUser: User): Promise<Comment> {
     // Validates ticket exists and enforces customer ownership (throws 404 if not authorized)
-    await this.ticketsService.findOne(ticketId, currentUser);
+    const ticket = await this.ticketsService.findOne(ticketId, currentUser);
+
+    if (ticket.status === TicketStatus.CLOSED) {
+      throw new BadRequestException('Cannot add comments to a closed ticket');
+    }
 
     const comment = this.commentsRepository.create({
       ticketId,

@@ -19,5 +19,6 @@ export class AiSuggestDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'Description is required for AI triage' })
+  @MaxLength(5000, { message: 'Description must not exceed 5000 characters for AI triage' })
   description: string;
 }

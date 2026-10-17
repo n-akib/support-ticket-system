@@ -11,6 +11,10 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { isUUID } from 'class-validator';
+import { Ticket } from '../tickets/entities/ticket.entity';
 
 @WebSocketGateway({
   cors: {
@@ -27,6 +31,8 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(Ticket)
+    private readonly ticketsRepository: Repository<Ticket>,
   ) {}
 
   /**
@@ -44,13 +50,22 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-      const secret = this.configService.get<string>(
-        'JWT_SECRET',
-        'super_secret_jwt_key_change_me',
-      );
+      const secret = this.configService.get<string>('JWT_SECRET');
+
+      if (!secret) {
+        this.logger.error('FATAL: JWT_SECRET environment variable is not defined.');
+        client.disconnect();
+        return;
+      }
 
       const payload = this.jwtService.verify(token, { secret });
       client.data.user = payload;
+
+      // Join per-user personal room so customer only receives their own notifications
+      const userId = payload.sub || payload.id;
+      if (userId) {
+        client.join(`user_${userId}`);
+      }
 
       // Agents and Admins join the 'staff' room for real-time ticket queue updates
       if (payload.role === 'agent' || payload.role === 'admin') {
@@ -69,19 +84,43 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * Client joins a specific ticket room to listen for status changes and comments
+   * Client joins a specific ticket room to listen for status changes and comments.
+   * Enforces strict UUID validation and customer ownership authorization.
    */
   @SubscribeMessage('join_ticket')
-  handleJoinTicket(
+  async handleJoinTicket(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { ticketId: string },
   ) {
-    if (data?.ticketId) {
-      const room = `ticket_${data.ticketId}`;
-      client.join(room);
-      this.logger.log(`Client ${client.id} joined room: ${room}`);
-      return { event: 'joined_ticket', data: { room, ticketId: data.ticketId } };
+    const user = client.data?.user;
+    if (!user) {
+      return { event: 'error', data: { message: 'Unauthorized connection' } };
     }
+
+    if (!data?.ticketId || !isUUID(data.ticketId)) {
+      return { event: 'error', data: { message: 'Invalid ticket UUID format' } };
+    }
+
+    // Lookup ticket to verify existence and check ownership
+    const ticket = await this.ticketsRepository.findOne({
+      where: { id: data.ticketId },
+    });
+
+    if (!ticket) {
+      return { event: 'error', data: { message: 'Ticket not found' } };
+    }
+
+    // Security rule: customer cannot listen to another customer's ticket room
+    const userId = user.sub || user.id;
+    if (user.role === 'customer' && ticket.createdById !== userId) {
+      this.logger.warn(`Unauthorized join_ticket attempt by ${user.email} for ticket ${data.ticketId}`);
+      return { event: 'error', data: { message: 'Ticket not found' } };
+    }
+
+    const room = `ticket_${data.ticketId}`;
+    client.join(room);
+    this.logger.log(`Client ${client.id} (${user.role}) joined room: ${room}`);
+    return { event: 'joined_ticket', data: { room, ticketId: data.ticketId } };
   }
 
   /**
@@ -101,16 +140,20 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /**
-   * Broadcasts new ticket creation to staff queue and creator
+   * Broadcasts new ticket creation ONLY to staff queue and creator room.
+   * Prevents customer data leaks to foreign clients.
    */
   emitTicketCreated(ticket: any) {
     if (this.server) {
-      this.server.emit('ticket_created', ticket);
+      this.server.to('staff').emit('ticket_created', ticket);
+      if (ticket.createdById) {
+        this.server.to(`user_${ticket.createdById}`).emit('ticket_created', ticket);
+      }
     }
   }
 
   /**
-   * Broadcasts status changes to anyone viewing the ticket and to staff
+   * Broadcasts status changes to anyone authorized in the ticket room and to staff
    */
   emitStatusChanged(ticketId: string, ticket: any) {
     if (this.server) {

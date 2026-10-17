@@ -15,12 +15,18 @@ import { RolesGuard } from './guards/roles.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'super_secret_jwt_key_change_me'),
-        signOptions: {
-          expiresIn: '24h',
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const secret = configService.get<string>('JWT_SECRET');
+        if (!secret) {
+          throw new Error('FATAL: JWT_SECRET environment variable is not defined.');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: '24h',
+          },
+        };
+      },
     }),
   ],
   controllers: [AuthController],

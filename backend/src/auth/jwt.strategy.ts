@@ -17,18 +17,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
   ) {
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('FATAL: JWT_SECRET environment variable is not defined.');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET', 'super_secret_jwt_key_change_me'),
+      secretOrKey: secret,
     });
   }
 
   async validate(payload: JwtPayload): Promise<User> {
-    const user = await this.usersService.findById(payload.sub);
-    if (!user) {
+    try {
+      return await this.usersService.findById(payload.sub);
+    } catch {
       throw new UnauthorizedException('User session is invalid or user no longer exists');
     }
-    return user;
   }
 }

@@ -48,8 +48,9 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code blocks, no ba
   "summary": "<1-2 sentence issue summary>"
 }`;
 
-    // Supports Gemini API (compatible with standard v1beta endpoint)
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Supports Gemini API (model configurable via LLM_MODEL env var)
+    const model = this.configService.get<string>('LLM_MODEL', 'gemini-1.5-flash').trim();
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000); // 6s timeout
@@ -100,9 +101,15 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code blocks, no ba
       priority = this.detectPriorityKeywords(`${title} ${description}`);
     }
 
-    const category = typeof parsed.suggestedCategory === 'string' && parsed.suggestedCategory.trim()
+    const ALLOWED_CATEGORIES = ['billing', 'technical', 'account', 'general'];
+    let category = typeof parsed.suggestedCategory === 'string' && parsed.suggestedCategory.trim()
       ? parsed.suggestedCategory.trim().toLowerCase()
-      : this.detectCategoryKeywords(`${title} ${description}`);
+      : '';
+
+    // Enforce allowed category schema; fallback to keyword detector if model hallucinates foreign category
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      category = this.detectCategoryKeywords(`${title} ${description}`);
+    }
 
     const summary = typeof parsed.summary === 'string' && parsed.summary.trim()
       ? parsed.summary.trim()
@@ -134,23 +141,23 @@ Respond ONLY with valid, raw JSON (no markdown formatting, no code blocks, no ba
     if (/payment|invoice|credit card|charge|subscription|pricing|refund|billing/i.test(text)) {
       return 'billing';
     }
-    if (/login|password|auth|2fa|account|reset password|signup|register/i.test(text)) {
+    if (/login|password|auth|sso|saml|2fa|unauthorized|account|reset password|signup|register|gdpr/i.test(text)) {
       return 'account';
     }
-    if (/bug|error|crash|exception|api|500|broken|timeout|failure/i.test(text)) {
+    if (/bug|error|crash|exception|api|500|broken|timeout|failure|postgres|database/i.test(text)) {
       return 'technical';
     }
     return 'general';
   }
 
   private detectPriorityKeywords(text: string): TicketPriority {
-    if (/production down|outage|urgent|critical|security breach|data loss|emergency/i.test(text)) {
+    if (/production down|outage|urgent|critical|security breach|unauthorized login|emergency|leaked/i.test(text)) {
       return TicketPriority.URGENT;
     }
-    if (/broken|cannot access|failing|error|asap|important/i.test(text)) {
+    if (/broken|cannot access|locked out|fail|error|crash|gateway timeout|timeout|twice|duplicate charge|asap|important/i.test(text)) {
       return TicketPriority.HIGH;
     }
-    if (/minor|typo|feature request|slow|cosmetic/i.test(text)) {
+    if (/minor|typo|feature request|feature suggestion|slow|cosmetic|need pdf|copy of|update address|general question|question regarding/i.test(text)) {
       return TicketPriority.LOW;
     }
     return TicketPriority.MEDIUM;

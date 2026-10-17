@@ -42,12 +42,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
         error = resObj.error || exception.name.replace('Exception', '');
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      message = 'Internal server error';
       this.logger.error(
         `Unhandled Error on ${request.method} ${request.url}: ${exception.message}`,
         exception.stack,
       );
     } else {
+      message = 'Internal server error';
       this.logger.error(`Unknown exception type caught: ${JSON.stringify(exception)}`);
     }
 
