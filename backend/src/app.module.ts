@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { CommentsModule } from './comments/comments.module';
 import { AiModule } from './ai/ai.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AiModule } from './ai/ai.module';
     TicketsModule,
     CommentsModule,
     AiModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

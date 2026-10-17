@@ -14,6 +14,8 @@ import { AssignTicketDto } from './dto/assign-ticket.dto';
 import { TicketFilterDto } from './dto/ticket-filter.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 
+import { EventsGateway } from '../events/events.gateway';
+
 export const ALLOWED_STATUS_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   [TicketStatus.OPEN]: [TicketStatus.IN_PROGRESS],
   [TicketStatus.IN_PROGRESS]: [TicketStatus.RESOLVED, TicketStatus.OPEN],
@@ -35,6 +37,7 @@ export class TicketsService {
     private readonly ticketsRepository: Repository<Ticket>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   /**
@@ -63,7 +66,9 @@ export class TicketsService {
     });
 
     const saved = await this.ticketsRepository.save(ticket);
-    return this.findOne(saved.id, currentUser);
+    const result = await this.findOne(saved.id, currentUser);
+    this.eventsGateway.emitTicketCreated(result);
+    return result;
   }
 
   /**
@@ -212,7 +217,9 @@ export class TicketsService {
 
     ticket.status = targetStatus;
     await this.ticketsRepository.save(ticket);
-    return this.findOne(ticket.id, currentUser);
+    const result = await this.findOne(ticket.id, currentUser);
+    this.eventsGateway.emitStatusChanged(ticket.id, result);
+    return result;
   }
 
   /**
@@ -237,7 +244,9 @@ export class TicketsService {
     }
 
     await this.ticketsRepository.save(ticket);
-    return this.findOne(ticket.id, currentUser);
+    const result = await this.findOne(ticket.id, currentUser);
+    this.eventsGateway.emitTicketAssigned(ticket.id, result);
+    return result;
   }
 
   /**

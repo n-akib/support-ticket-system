@@ -5,6 +5,7 @@ import { CommentsService } from './comments.service';
 import { Comment } from './entities/comment.entity';
 import { TicketsService } from '../tickets/tickets.service';
 import { User, UserRole } from '../users/entities/user.entity';
+import { EventsGateway } from '../events/events.gateway';
 
 describe('CommentsService', () => {
   let service: CommentsService;
@@ -72,6 +73,12 @@ describe('CommentsService', () => {
         CommentsService,
         { provide: getRepositoryToken(Comment), useValue: commentsRepo },
         { provide: TicketsService, useValue: ticketsService },
+        {
+          provide: EventsGateway,
+          useValue: {
+            emitCommentAdded: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

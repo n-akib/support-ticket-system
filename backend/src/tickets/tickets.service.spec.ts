@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException, ForbiddenException } from '@nes
 import { TicketsService, SLA_HOURS_BY_PRIORITY } from './tickets.service';
 import { Ticket, TicketPriority, TicketStatus } from './entities/ticket.entity';
 import { User, UserRole } from '../users/entities/user.entity';
+import { EventsGateway } from '../events/events.gateway';
 
 describe('TicketsService', () => {
   let service: TicketsService;
@@ -96,6 +97,15 @@ describe('TicketsService', () => {
         TicketsService,
         { provide: getRepositoryToken(Ticket), useValue: ticketsRepo },
         { provide: getRepositoryToken(User), useValue: usersRepo },
+        {
+          provide: EventsGateway,
+          useValue: {
+            emitTicketCreated: jest.fn(),
+            emitStatusChanged: jest.fn(),
+            emitCommentAdded: jest.fn(),
+            emitTicketAssigned: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

@@ -5,6 +5,7 @@ import { Comment } from './entities/comment.entity';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { TicketsService } from '../tickets/tickets.service';
 import { User } from '../users/entities/user.entity';
+import { EventsGateway } from '../events/events.gateway';
 
 @Injectable()
 export class CommentsService {
@@ -12,6 +13,7 @@ export class CommentsService {
     @InjectRepository(Comment)
     private readonly commentsRepository: Repository<Comment>,
     private readonly ticketsService: TicketsService,
+    private readonly eventsGateway: EventsGateway,
   ) {}
 
   /**
@@ -29,7 +31,12 @@ export class CommentsService {
     });
 
     const saved = await this.commentsRepository.save(comment);
-    return this.findOneWithAuthor(saved.id);
+    const result = await this.findOneWithAuthor(saved.id);
+
+    // Broadcast real-time comment_added event to anyone viewing this ticket
+    this.eventsGateway.emitCommentAdded(ticketId, result);
+
+    return result;
   }
 
   /**
